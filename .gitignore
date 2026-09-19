@@ -1,0 +1,11 @@
+# 通用
+Thumbs.db
+desktop.ini
+.DS_Store
+*.zip
+*.tgz
+*.tar.gz
+node_modules/
+# 临时 / 备份
+*.bak*
+_*/
