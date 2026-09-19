@@ -51,6 +51,14 @@
     return !!(el && el.getClientRects && el.getClientRects().length > 0)
   }
 
+  // 已核实（对 dsh-web-frontend 出货代码的实测）：UI 基元的 Button 渲染成原生
+  //   <button type="button" class="..." ...spread>
+  // disabled / onClick 经由剩余属性展开落到该 button 上，所以 el.disabled 是可靠的。
+  // aria-disabled 在当前版本不出现，留着是为了将来万一改成 role="button"。
+  function isDisabled(el) {
+    return el.disabled === true || el.getAttribute('aria-disabled') === 'true'
+  }
+
   function labelOf(el) {
     return (el.textContent || '').replace(/\s+/g, ' ').trim()
   }
@@ -60,7 +68,7 @@
     // 允许一次是主操作，渲染在动作行最后 → 从后往前找第一个可点且不是「拒绝」的
     for (var i = btns.length - 1; i >= 0; i--) {
       var b = btns[i]
-      if (b.disabled) continue
+      if (isDisabled(b)) continue
       if (!visible(b)) continue
       if (REJECT_LABELS.test(labelOf(b))) continue
       return b
@@ -79,7 +87,7 @@
     var all = document.querySelectorAll('button, [role="button"]')
     for (var j = all.length - 1; j >= 0; j--) {
       var b = all[j]
-      if (b.disabled || !visible(b)) continue
+      if (isDisabled(b) || !visible(b)) continue
       var t = labelOf(b)
       if (REJECT_LABELS.test(t)) continue
       if (ALLOW_LABELS.test(t)) return b
