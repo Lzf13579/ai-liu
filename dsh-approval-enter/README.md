@@ -23,6 +23,7 @@ DSH Web 的审批弹窗键盘增强：**按回车 = 点「允许一次」**。
 | **不会误发草稿** | 捕获阶段 + `preventDefault` + `stopPropagation`，抢在输入框回车之前。 |
 | **中文输入法安全** | 排除 `isComposing` / `keyCode 229`，组字中途不触发。 |
 | **不会把回车变成拒绝** | 只认「允许一次」；找不到按钮就什么都不做。 |
+| **shadow DOM 兼容** | 面板即使被移进 shadow root（当前出货前端并不用 shadow DOM）也能命中；用 `MutationObserver` + `takeRecords()` 维护 shadow root 列表，DOM 无变动时开销 O(1)。 |
 | **保留组合键** | `Ctrl` / `Meta` / `Alt` / `Shift` + 回车一律放行。 |
 | **无副作用** | 不写文件、不改配置、不发网络请求；卸载即彻底干净。 |
 
@@ -44,6 +45,7 @@ dsh plugin --profile web add link:<解压出来的插件目录绝对路径>
 window.__dshApprovalEnter.installed   // true
 window.__dshApprovalEnter.version     // "0.1.0"
 window.__dshApprovalEnter.triggers    // 回车生效过的次数，按一次加一
+window.__dshApprovalEnter.shadowRoots() // 扫到的 shadow root 数（当前 DSH 出货前端应为 0）
 ```
 
 触发一次审批（让 Agent 执行一条需要授权的命令），按回车 —— 弹窗应当立刻变成「允许一次」的结果，`triggers` 变成 1。
