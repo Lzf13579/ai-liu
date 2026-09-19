@@ -1,0 +1,37 @@
+{
+  "name": "dsh-approval-enter",
+  "version": "0.1.0",
+  "description": "DSH Web 审批弹窗键盘增强：按回车 = 点「允许一次」。纯注入式插件，不改 DSH 任何文件，DSH 升级后依然有效。",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "approval",
+    "keyboard",
+    "enter"
+  ],
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib",
+    "assets",
+    "cordis.patch.yml",
+    "README.md",
+    "安装说明.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lzf13579/ai-liu.git",
+    "directory": "dsh-approval-enter"
+  },
+  "bugs": {
+    "url": "https://github.com/Lzf13579/ai-liu/issues"
+  },
+  "homepage": "https://github.com/Lzf13579/ai-liu/tree/main/dsh-approval-enter#readme",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT"
+}

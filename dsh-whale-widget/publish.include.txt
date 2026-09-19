@@ -1,0 +1,23 @@
+# publish.include.txt —— 这个插件要发布出去的「公开子集」
+# 由 publish-plugin.ps1 读取。每行一个 glob（相对插件根），# 开头是注释。
+# 不在这里列出的东西，既不会进集合仓库，也不会进压缩包。
+#
+# 刻意排除的东西（第三方素材，不可再分发）：
+#   art\ 里除 rice.png 以外的图片
+#   songs\ 全部
+#   *.bak* 本地备份、*.zip / *.tgz 本地产物
+
+lib/**
+assets/**
+art/rice.png
+
+package.json
+cordis.patch.yml
+LICENSE
+LICENSE-dsh-rice-widget.txt
+README.md
+PROVENANCE.md
+安装说明.md
+偷吃白饭-说明.md
+.gitignore
+publish.include.txt

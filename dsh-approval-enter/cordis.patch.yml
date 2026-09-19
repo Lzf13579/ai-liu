@@ -1,0 +1,18 @@
+# ============================================================================
+# dsh-approval-enter —— DSH bundle patch
+# ============================================================================
+# 插件的"挂载声明"。DSH 启动时按 bundle 层栈叠加各插件 patch，
+# 本文件把「审批弹窗回车确认」插入 Web profile 的配置树。
+#
+# 安装方式：
+#   dsh plugin --profile web add link:<插件目录绝对路径>
+# 例如插件解压在 D:\dsh-plugins\dsh-approval-enter：
+#   dsh plugin --profile web add link:D:/dsh-plugins/dsh-approval-enter
+#
+# 卸载 = 把这条 insert 移除（或用 dsh plugin remove），插件完全不留痕迹：
+# 它不写任何文件、不改 DSH 自身的任何模块。
+# ============================================================================
+
+- insert:
+    - id: dsh-approval-enter
+      name: dsh-approval-enter

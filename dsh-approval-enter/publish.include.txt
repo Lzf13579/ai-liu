@@ -1,0 +1,15 @@
+# publish.include.txt —— 这个插件要发布出去的「公开子集」
+# 由 publish-plugin.ps1 读取。每行一个 glob（相对插件根），# 开头是注释。
+#
+# 本插件没有第三方素材，也没有本地专用文件：
+#   全部源码、脚本、文档与许可都是可公开发布的。
+
+lib/**
+assets/**
+
+package.json
+cordis.patch.yml
+LICENSE
+README.md
+安装说明.md
+publish.include.txt
