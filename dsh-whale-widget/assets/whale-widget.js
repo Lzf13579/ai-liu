@@ -249,7 +249,7 @@ var css = [
   // 关键：--dshw-u 原本只定义在 .dshwv-pop 上，而本元素挂在 .dshwv-root 下、
   // 是 .dshwv-pop 的兄弟节点，继承不到 → 所有 calc(var(--dshw-u)*N) 全部失效，
   // 字号/内边距塌成默认值（实测高度只有 18px，看着像"没有方框"）。这里自行定义。
-  '.dshwv-tstats{position:absolute;display:none;box-sizing:border-box;--dshw-u:calc(var(--dshw-base) / 1026);padding:calc(var(--dshw-u) * 16) calc(var(--dshw-u) * 24);border:1px solid rgba(52,74,147,.22);border-radius:10px;background:#dce9ff;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;line-height:1;pointer-events:none;z-index:3;box-shadow:0 4px 12px rgba(42,63,143,.18);white-space:nowrap}',
+  '.dshwv-tstats{position:absolute;display:none;box-sizing:border-box;--dshw-u:calc(var(--dshw-base) / 1026);padding:calc(var(--dshw-u) * 16) calc(var(--dshw-u) * 24);border:1px solid rgba(52,74,147,.22);border-radius:10px;background:#dce9ff;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;line-height:1;pointer-events:none;z-index:10000;box-shadow:0 4px 12px rgba(42,63,143,.18);white-space:nowrap}',
   '.dshwv-tstats.dshwv-tstats-open{display:block}',
   // 单行指标：各项之间用淡竖线分隔
   '.dshwv-tstats .dshwv-ts-items{display:flex;align-items:center;gap:calc(var(--dshw-u) * 18)}',
@@ -261,8 +261,8 @@ var css = [
   '.dshwv-tstats .dshwv-ts-out{color:#6b5aa8}',
   '.dshwv-tstats .dshwv-ts-total{color:#1f7fa8}',
   '.dshwv-tstats .dshwv-ts-time{color:#357f68}',
-  // 左吸附时 root 整体 scaleX(-1)，方框需反向抵消，避免文字镜像
-  '.dshwv-root.dshwv-left .dshwv-tstats{transform:scaleX(-1)}',
+  // 方框已挂 document.body（不在 .dshwv-root 的镜像坐标系里），
+  // 原先那条 '.dshwv-root.dshwv-left .dshwv-tstats{transform:scaleX(-1)}'（用来抵消镜像）已删除。,
   '.dshwv-menu-sep{height:1px;background:rgba(32,49,112,.25);margin:6px 0}',
   '.dshwv-volpct{width:44px;text-align:right;color:#203170;font-size:12px}',
   '.dshwv-rolebtn-wrap{position:relative;flex:1;min-width:0}',
@@ -10271,6 +10271,9 @@ function applyTokenStatsMetrics() {
     if (!tokenStatsEl) return
     var r = img.getBoundingClientRect()
     var base = (r && r.width > 0) ? r.width : 128
+    // 方框挂 body 后继承不到 .dshwv-root 上的 --dshw-base，这里自己补一份，
+    // 免得 CSS 里 calc(var(--dshw-u) * N) 失效（尺寸仍以内联像素为准）。
+    tokenStatsEl.style.setProperty('--dshw-base', base + 'px')
     var u = base / 128
     var fs = Math.max(11, Math.round(13 * u))
     var padY = Math.max(4, Math.round(6 * u))
@@ -10289,16 +10292,15 @@ function applyTokenStatsMetrics() {
     if (items) items.style.gap = Math.round(gap * 0.6) + 'px'
   } catch (err) {}
 }
-// 定位：方框横向居中于角色图，浮在其下部；原图方向，抵消 root 的镜像
-// ★ 位置微调：改这里即可（单位：像素）
-//   RIGHT_OFFSET   越大越往左；0 = 与角色右边缘对齐
-//   BOTTOM_MARGIN  方框下边缘距窗口底边的距离；越小越靠下（0 = 贴底）
-//   NUDGE_UP       额外上移量，用于在 BOTTOM_MARGIN 基础上做±若干像素的微调
-//
-// 定位基准已改为「方框下边缘对屏幕底边」：
-// 角色图本身贴屏幕右下角，所以方框靠下时，视觉上角色图位于方框上方。
+// 定位：横向贴**角色图**的左右边，纵向对齐**角色图的下端**。全部以角色几何为准（不是视口边）：
+//   左吸附 → 贴角色左边缘；右吸附 → 贴角色右边缘；下吸附 → 方框下边缘对齐角色下端。
+//   角色图贴屏幕右下角时，各基准与视口边重合，所以观感与旧版一致；
+//   角色被拖拽/缩放时方框会跟着走（位置在每秒轮询里重算）。
+//   RIGHT_OFFSET   从角色左/右边往**内侧**的偏移（越大越往里）；0 = 与角色边对齐
+//   BOTTOM_MARGIN  方框下边缘相对**角色下端**的偏移；负数往下（默认 -5 即略低于角色底）
+//   NUDGE_UP       额外上移量，在 BOTTOM_MARGIN 基础上做 ±若干像素微调
 // 注意：方框高度随挂件缩放变化（约 27px @ 默认缩放），BOTTOM_MARGIN 取 0
-// 在放大后可能被窗口底边裁掉，建议留 20~40px。
+// 在放大后可能被屏幕底边裁掉，建议留 20~40px。
 var TOKEN_STATS_RIGHT_OFFSET = 0
 var TOKEN_STATS_BOTTOM_MARGIN = -5
 var TOKEN_STATS_NUDGE_UP = 0
@@ -10306,23 +10308,52 @@ var TOKEN_STATS_NUDGE_UP = 0
 function positionTokenStats() {
   try {
     if (!tokenStatsEl) return
-    // 已挂进 .dshwv-pop（与点击气泡同图层、同坐标系）。
-    // 用 fixed 定位 + 视口底边为基准：不受页面滚动影响，也不会被容器下沿裁切。
+    // 方框挂在 document.body 上（见下方挂载处），用 fixed + 视口坐标定位：
+    // 不受页面滚动影响，也不会被鲸鱼容器裁切。横向在下面按**角色几何**算，这里不预设。
     tokenStatsEl.style.position = 'fixed'
     tokenStatsEl.style.left = 'auto'
+    tokenStatsEl.style.right = 'auto'
     tokenStatsEl.style.top = 'auto'
-    tokenStatsEl.style.right = TOKEN_STATS_RIGHT_OFFSET + 'px'
     tokenStatsEl.style.bottom =
       (TOKEN_STATS_BOTTOM_MARGIN + TOKEN_STATS_NUDGE_UP) + 'px'
-    tokenStatsEl.style.transformOrigin = '100% 100%'
-    // 定位用 fixed 后已脱离 root 的 scaleX(-1) 影响，无需再反向抵消文字。
-    // 但左吸附时方框应跟到左侧：right 偏移改用 left 对应位置。
-    if (root.classList.contains('dshwv-left')) {
-      tokenStatsEl.style.left = TOKEN_STATS_RIGHT_OFFSET + 'px'
-      tokenStatsEl.style.right = 'auto'
+    // 方框已挂 document.body：fixed 用视口坐标。
+    // ⚠️ 横向基准是**角色图的边**，不是软件视口的边 —— 两者不重合：
+    //    吸附会留边，而且 .dshwv-root 的宽度由 --dshw-base 决定、角色图只占其中 59.45%。
+    //    用视口边时：右吸附看着对（角色恰好贴右边），左吸附就会偏到软件左边框上。
+    //    img.getBoundingClientRect() 返回的是**变换后**的视口坐标 →
+    //    左吸附（root 被 scaleX(-1)）时 rect.left 就是角色的视觉左边缘，天然正确。
+    //    TOKEN_STATS_RIGHT_OFFSET：从角色那条边往里侧的偏移（越大越往里），0 = 与角色边对齐。
+    //    垂直方向仍以视口底边为基准（与角色贴底一致），保持原有观感不变。
+    var dshwvDockedLeft = root.classList.contains('dshwv-left')
+    tokenStatsEl.style.transformOrigin = dshwvDockedLeft ? '0% 100%' : '100% 100%'
+    var dshwvRect = null
+    try { dshwvRect = img.getBoundingClientRect() } catch (err) { dshwvRect = null }
+    if (dshwvRect && dshwvRect.width > 0) {
+      var dshwvVW = window.innerWidth || document.documentElement.clientWidth || 0
+      var dshwvVH = window.innerHeight || document.documentElement.clientHeight || 0
+      // 纵向同理：以**角色下端**为基准（下吸附时角色贴底 → 与视口底边重合，观感不变；
+      // 角色被拖/缩放到别处时方框会跟着走，而不是留在视口底部不动）。
+      // BOTTOM_MARGIN 为负 = 方框下边缘比角色下端再往外偏这么多像素。
+      tokenStatsEl.style.bottom =
+        Math.round(dshwvVH - dshwvRect.bottom + TOKEN_STATS_BOTTOM_MARGIN + TOKEN_STATS_NUDGE_UP) + 'px'
+      if (dshwvDockedLeft) {
+        // 角色左边 + 偏移 = 方框左边
+        tokenStatsEl.style.left = Math.round(dshwvRect.left + TOKEN_STATS_RIGHT_OFFSET) + 'px'
+        tokenStatsEl.style.right = 'auto'
+      } else {
+        // 角色右边距视口右边的距离 + 偏移 = 方框右边
+        tokenStatsEl.style.right = Math.round(dshwvVW - dshwvRect.right + TOKEN_STATS_RIGHT_OFFSET) + 'px'
+        tokenStatsEl.style.left = 'auto'
+      }
     } else {
-      tokenStatsEl.style.right = TOKEN_STATS_RIGHT_OFFSET + 'px'
-      tokenStatsEl.style.left = 'auto'
+      // 兜底：拿不到角色几何时退回视口边（旧行为）
+      if (dshwvDockedLeft) {
+        tokenStatsEl.style.left = TOKEN_STATS_RIGHT_OFFSET + 'px'
+        tokenStatsEl.style.right = 'auto'
+      } else {
+        tokenStatsEl.style.right = TOKEN_STATS_RIGHT_OFFSET + 'px'
+        tokenStatsEl.style.left = 'auto'
+      }
     }
   } catch (err) {}
 }
@@ -10342,15 +10373,21 @@ function updateTokenStats(d) {
     applyTokenStatsVisibility()
   } catch (err) {}
 }
-// [whale-patch] 方框改为挂进气泡容器（.dshwv-pop），与点击气泡同一图层、同一坐标系：
-//   - .dshwv-pop 是 absolute + 相对 .dshwv-body 定位，且 --dshw-u 就定义在它上面
-//   - 因此不再需要自己换算 viewport/文档坐标（之前正是这里算错导致方框被推到屏幕外）
-try { bubbleBox.appendChild(tokenStatsEl) } catch (err) {}
+// [whale-patch 2026-09-20] 方框改挂 document.body（原来挂进气泡容器 .dshwv-pop）。
+// 原因：左吸附时 .dshwv-root 会套 transform:scaleX(-1)，而**带 transform 的祖先会成为
+// position:fixed 的包含块** —— 方框的 left/right 就不再相对视口，左吸附会落到错误一侧；
+// 右吸附时 root 没有 transform，所以一直正常 = 此前只“适配”了右吸附。
+// 这与设置面板（.dshrice-menu）当年踩的是同一个坑，那边也是挂 body 解决的。
+// 挂 body 后 left:0 / right:0 在两种吸附下都相对视口，左右行为对称。
+// 用 dshwBodyAppend() 登记，SPA 切路由后由 DOM 守护补挂回来。
+try { dshwBodyAppend(tokenStatsEl) } catch (err) {}
 try {
   window.addEventListener('resize', function () { positionTokenStats() })
 } catch (err) {}
 dshwBodyAppend(root)
 dshwBodyAppend(menuBox)
+// 侧边栏可能比挂件先/后出现，这里先绑一次；SPA 换节点由下面 DOM 守护的全量核对再补
+try { dshwSidebarObserve() } catch (err) {}
 
 // ===== PR #105 后半：DOM 守护（SPA 切路由 / 别的插件替换 body 子树时把节点摘掉）=====
 // 背景：DSH 是 SPA，切到会话列表 / 设置 / 插件市场再回来、或其它客户端插件整体替换
@@ -10379,7 +10416,7 @@ try {
         if (!dshwConnected(root)) { dshwReattachRoot(); dshwGuardLastFull = Date.now(); return }
         // root 正常时也定期全量核对一次（最多 1.5 秒一次）：覆盖"只有个别浮层被摘掉"的情况
         var now = Date.now()
-        if (now - dshwGuardLastFull > 1500) { dshwGuardLastFull = now; dshwReattachRoot() }
+        if (now - dshwGuardLastFull > 1500) { dshwGuardLastFull = now; dshwReattachRoot(); dshwSidebarObserve() }
       } catch (err) {}
     })
     dshwRootGuard.observe(document.documentElement, { childList: true, subtree: true })
@@ -12473,6 +12510,76 @@ function settle() {
   refreshFlip()
 }
 // 阈值坐标（px）：按当前配置计算四条吸附区边界与翻转线的屏幕坐标；'off' 返回全屏默认。
+// ===== 左吸附基准：侧边栏与「对话工作栏」之间的分隔线（2026-09-20）=====
+// 需求：侧边栏（设置/会话列表那一条）展开时，左吸附的判定线与落位都要用**分隔线**，
+//       而不是窗口最左边 —— 否则鲸鱼会贴到侧边栏外沿、甚至被侧边栏盖住。
+// 选择器（2026-09-20 实测本机 DSH 0.1.5-rc.2 产物，不是照抄主题插件）：
+//   · 真正命中的是 dsh-client-ui-layout 里的 CSS Module 类 `pI_x6G_sidebarCol`
+//     —— 哈希前缀每次构建都会变，可读后缀 `sidebarCol` 稳定，所以用 [class*='sidebarCol']；
+//     它的 `border-right: .5px solid …` **就是那条分隔线**，取它的 getBoundingClientRect().right即分隔线 x。
+//   · `[data-pane='sidebar']` 在本版产物里**根本不存在**（主题插件那个选择器的前半段是历史遗留），
+//     这里留着只是将来 DSH 换写法时的兜底。
+//   · 侧边栏折叠时同目录下会渲染 `data-sidebar-collapsed`（DragHandle 也不再渲染），
+//     所以折叠/隐藏的判定交给下面的 width/height/位置几何条件，不用去认那个属性。
+// ⚠️ 千万不要写成 [class*='sidebar']：挂件自己就有一个 .dshwv-sidebar（菜单里的元素）会误命中。
+var DSHA_SIDEBAR_SELECTOR = ":is([data-pane='sidebar'], [class*='sidebarCol'])"
+// 分隔线这条吸附线的**判定范围**往右多给多少像素（用户 2026-09-20 调过一次：5）。
+// 只影响"哪片区域算左区"：范围内落位仍然按"离哪条线近"决定贴应用边框还是贴分隔线。
+var DSHA_DIVIDER_RANGE_PX = 5
+function dshwSidebarRight() {
+  try {
+    var el = document.querySelector(DSHA_SIDEBAR_SELECTOR)
+    if (!el) return 0
+    var r = el.getBoundingClientRect()
+    if (!r || r.width <= 0 || r.height <= 0) return 0      // 折叠/隐藏时不参与
+    var vw = window.innerWidth || document.documentElement.clientWidth || 0
+    // 只认真正在视口**左侧**的那一条：右侧栏（dsh-client-ui-sidebar-right）也带 sidebarCol，
+    // 它的 left 在右半屏，用这个几何条件排掉。
+    if (r.right <= 0 || r.left >= vw / 2) return 0
+    return Math.max(0, Math.round(r.right))
+  } catch (err) { return 0 }
+}
+// 左吸附落位到**哪条线**：候选是 ① 应用边框（x=0）② 侧边栏与对话工作栏的分隔线。
+//   · 历史上落位点一直是 0（应用边框）—— 那是"贴左边"，不是"贴用户配置的判定线"（默认 10%）。
+//     上一版误把判定线当落位线，于是贴最左也只贴到 10% 那儿，用户反馈"应用边框不行了"。
+//   · 侧边栏展开时也别把人顶死：落点按**图像中心**就近选一条，两条线都还能用。
+//   · 没有侧边栏（折叠/隐藏）时只剩应用边框。
+//   fromX：参考点 —— 落位时传**挂件盒左边缘**（视觉上贴住线的那条边），复贴时传当前停靠位置。
+function dshwLeftDockX(fromX) {
+  var div = dshwSidebarRight()
+  if (!(div > 0)) return 0
+  var x = (typeof fromX === 'number' && isFinite(fromX)) ? fromX : 0
+  return (x < div / 2) ? 0 : div
+}
+// 已经贴左时，侧边栏宽度/折叠状态变化后**沿用它原来贴的那条线**重新贴：
+//   dshwLeftDockX(state.hOff) —— 参考点取"当前停靠位置"，所以贴应用边框的不会被拽到分隔线，
+//   贴分隔线的会跟着侧边栏的新宽度走。
+function dshwReanchorLeftDock() {
+  try {
+    if (state.h !== 'left') return
+    var x = dshwLeftDockX(state.hOff)
+    if (state.hOff === x) return
+    state.hOff = x
+    settle()
+  } catch (err) {}
+}
+// 观察侧边栏尺寸：可折叠、可拖宽，而且 SPA 会换节点 —— 所以每次核对节点是否还是同一个
+var dshwSidebarEl = null
+var dshwSidebarRO = null
+function dshwSidebarObserve() {
+  try {
+    if (typeof ResizeObserver === 'undefined') return
+    var el = document.querySelector(DSHA_SIDEBAR_SELECTOR)
+    if (!el || el === dshwSidebarEl) return
+    if (!dshwSidebarRO) {
+      dshwSidebarRO = new ResizeObserver(function () { dshwReanchorLeftDock() })
+    }
+    if (dshwSidebarEl) { try { dshwSidebarRO.unobserve(dshwSidebarEl) } catch (err) {} }
+    dshwSidebarEl = el
+    dshwSidebarRO.observe(el)
+    dshwReanchorLeftDock()      // 换了节点（例如刚进会话页）立刻按新分隔线复贴一次
+  } catch (err) {}
+}
 function snapBounds(vp) {
   var b = { L: 0, T: 0, R: vp.w, B: vp.h, F: vp.w / 2 }
   try {
@@ -12492,19 +12599,39 @@ function snapBounds(vp) {
       b.F = vp.w * cfg.ratio.F / 100
     }
   } catch (err) {}
+  // 【2026-09-20】判定线（哪片区域算"左区"）要覆盖到侧边栏右侧的分隔线 —— 否则侧边栏一展开，
+  // 鲸鱼丢在侧边栏区域里不算左吸附。用户显式把 L 设得更靠右时尊重用户（取较大值）。
+  // 注意：这只是**判定区**；真正落位到哪条线由 dshwLeftDockX() 就近决定（应用边框也一直可用）。
+  // mode==='off' 在上面的提前 return 里已经走掉了，这里不用管。
+  try {
+    var dshwvDivider = dshwSidebarRight()
+    if (dshwvDivider > 0) {
+      // 判定范围 = 分隔线 + DSHA_DIVIDER_RANGE_PX（用户要求往右多给一点，
+      // 这样角色贴着分隔线右缘落下时也算左吸附）
+      var dshwvLine = dshwvDivider + DSHA_DIVIDER_RANGE_PX
+      if (dshwvLine > b.L) b.L = dshwvLine
+    }
+  } catch (err) {}
   return b
 }
-// 吸附判定。判定点：cx = 图像中心 x（左右吸附区 + 翻转线）；
+// 吸附判定。判定点：
+//   · 左区：**挂件盒左边缘** leftEdge（可选参数）—— 左吸附现在有两条候选线（应用边框 / 侧边栏分隔线），
+//           而且侧边栏是盖在视口左侧的，用"图像中心"判会让"角色贴住分隔线"落在区外（实测过）。
+//           不传时退回 cx（旧行为）。
+//   · 右区：cx = 图像中心 x（与原设计一致）
+//   · 翻转线：cx = 图像中心 x
 // cyBox = 挂件盒中心 y（顶吸附区）；cyImg = 图像中心 y（底吸附区）。
 // 返回 { zH:'left'|'right'|null, zV:'top'|'bottom'|null, flip:boolean }；'off' 全自由且不翻转。
-function snapZones(cx, cyBox, cyImg, vp) {
+function snapZones(cx, cyBox, cyImg, vp, leftEdge) {
   var out = { zH: null, zV: null, flip: false }
   try {
     var cfg = snapConfig
     if (!cfg || cfg.mode === 'off') return out
     var b = snapBounds(vp)
     out.flip = cx < b.F
-    if (cx < b.L) out.zH = 'left'
+    // 左区用"盒左边缘"判（不传则退回图像中心）：角色左边缘刚好贴住分隔线（==）也算命中
+    var dshwvLz = (typeof leftEdge === 'number' && isFinite(leftEdge)) ? leftEdge : cx
+    if (dshwvLz <= b.L) out.zH = 'left'
     else if (cx > b.R) out.zH = 'right'
     if (cyBox < b.T) out.zV = 'top'
     else if (cyImg > b.B) out.zV = 'bottom'
@@ -13014,12 +13141,14 @@ function snapCheck() {
   var left = rect.left, top = rect.top
   // 判定点：左右吸附/翻转 = 图像中心 x，下吸附 = 图像中心 y，上吸附 = 挂件盒中心 y
   var ac = artCenterAt(left, top, w, h, !!state.flip)
-  var z = snapZones(ac.cx, top + h / 2, ac.cy, vp)
+  var z = snapZones(ac.cx, top + h / 2, ac.cy, vp, left)
   var moved = false
   if (z.zH === 'left') {
     state.h = 'left'
-    state.hOff = 0
-    left = 0
+    // 参考点用**挂件盒左边缘 left**：视觉上"贴住线"的是这条边，
+    // 用图像中心会让落位与判定错位（实测过：拖到分隔线反而不吸附）。
+    state.hOff = dshwLeftDockX(left)
+    left = state.hOff
     moved = true
   } else if (z.zH === 'right') {
     state.h = 'right'
@@ -13044,7 +13173,7 @@ function snapCheck() {
     state.v = 'bottom'
     state.vOff = Math.max(0, vp.h - top - h)
   }
-  state.flip = z.flip
+  state.flip = z.zH === 'left' ? true : (z.zH === 'right' ? false : z.flip)
   if (moved) {
     state.left = left
     state.top = top
@@ -14909,10 +15038,10 @@ function endDrag(e, clickAllowed, cancelled) {
   // 下吸附 = 图像中心 y，上吸附 = 挂件盒中心 y。
   // 解析计算，避免拖动结束过渡期强制布局。
   var ac = artCenterAt(left, top, drag.w, drag.h, !!state.flip)
-  var z = snapZones(ac.cx, top + drag.h / 2, ac.cy, drag.vp)
+  var z = snapZones(ac.cx, top + drag.h / 2, ac.cy, drag.vp, left)
   if (z.zH === 'left') {
     state.h = 'left'
-    state.hOff = 0
+    state.hOff = dshwLeftDockX(left)
   } else if (z.zH === 'right') {
     state.h = 'right'
     state.hOff = 0
@@ -14973,6 +15102,8 @@ function applyAnchorPos() {
   } catch (err) { return false }
 }
 window.addEventListener('resize', function () {
+  dshwSidebarObserve()
+  dshwReanchorLeftDock()
   if (state.h === null && state.v === null && applyAnchorPos()) return
   settle()
 })
